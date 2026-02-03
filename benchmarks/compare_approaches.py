@@ -2,14 +2,19 @@
 """
 Comparison: NeuromemoryAI vs Vector-Based Memory (Mem0/Zep)
 
-This benchmark compares the APPROACHES, not implementations.
-We simulate what each approach would do and measure theoretical differences.
+Both approaches are designed for LLM agents — the comparison is about
+what ADDITIONAL infrastructure each requires beyond the LLM.
 
 Key comparisons:
-1. Latency: Local FTS5 vs API-based embedding
-2. Dependencies: Zero vs multiple services
-3. Retrieval dynamics: Activation-based vs pure similarity
-4. Memory growth: With forgetting vs without
+1. Additional API calls: 0 (NeuromemoryAI) vs 1+ per recall (embedding)
+2. Additional infrastructure: SQLite file vs Embedding API + Vector DB
+3. Retrieval dynamics: Activation-based (recency, frequency, importance) vs pure similarity
+4. Memory lifecycle: Forgetting + consolidation vs flat storage
+
+NOTE: This is not an apples-to-apples accuracy comparison.
+- FTS5 does keyword matching, embeddings do semantic matching
+- NeuromemoryAI's advantage is memory DYNAMICS, not retrieval accuracy
+- For fair accuracy comparison, see LoCoMo benchmark (benchmarks/eval_locomo.py)
 """
 
 import os
@@ -353,24 +358,29 @@ def main():
     benchmark_hebbian_vs_ner()
     
     print("\n" + "=" * 60)
-    print("SUMMARY")
+    print("SUMMARY (Both assume LLM already present)")
     print("=" * 60)
     print("""
-┌─────────────────┬──────────────────┬─────────────────────────────────┐
-│ Aspect          │ NeuromemoryAI    │ Mem0/Zep                        │
-├─────────────────┼──────────────────┼─────────────────────────────────┤
-│ Latency         │ ~3ms             │ ~60ms (API calls)               │
-│ Dependencies    │ Zero             │ OpenAI, Vector DB               │
-│ Offline         │ Yes              │ No                              │
-│ Forgetting      │ Yes (automatic)  │ No (manual deletion)            │
-│ Associations    │ Hebbian (usage)  │ NER or manual                   │
-│ Retrieval       │ Activation-based │ Cosine similarity               │
-│ Storage growth  │ Bounded          │ Unbounded                       │
-└─────────────────┴──────────────────┴─────────────────────────────────┘
+┌──────────────────────┬──────────────────┬─────────────────────────────┐
+│ Aspect               │ NeuromemoryAI    │ Mem0/Zep                    │
+├──────────────────────┼──────────────────┼─────────────────────────────┤
+│ Extra API calls      │ 0                │ 1+ (embedding per recall)   │
+│ Additional infra     │ SQLite file      │ Embedding API + Vector DB   │
+│ Offline (local LLM)  │ Yes              │ No                          │
+│ Forgetting           │ Yes (automatic)  │ No (manual deletion)        │
+│ Associations         │ Hebbian (usage)  │ NER or manual               │
+│ Retrieval ranking    │ Activation-based │ Cosine similarity           │
+│ Memory lifecycle     │ Working→Core→Arc │ Flat storage                │
+└──────────────────────┴──────────────────┴─────────────────────────────┘
 
-Key insight: Vector search is great for semantic similarity, but
-memory dynamics require more than similarity — they require modeling
-how memory BEHAVES over time (strengthening, weakening, associating).
+Key insight: Both systems work WITH an LLM. The difference is:
+- Mem0/Zep add embedding infrastructure for semantic retrieval
+- NeuromemoryAI adds cognitive dynamics (forgetting, consolidation, Hebbian)
+
+Vector search excels at semantic similarity.
+NeuromemoryAI excels at memory BEHAVIOR over time.
+
+For semantic accuracy comparison, see LoCoMo benchmark.
 """)
 
 

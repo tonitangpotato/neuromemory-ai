@@ -81,14 +81,22 @@ The math is simple. The insight is connecting it to agent memory. Total core: **
 
 ## What You Need
 
-**Just Python 3.10+.** That's it.
+**Just Python 3.10+ and your existing LLM.**
 
-- ❌ No API keys (OpenAI, Anthropic, etc.)
-- ❌ No vector database (Pinecone, Chroma, etc.)
-- ❌ No embedding model
-- ❌ No external services
+NeuromemoryAI is designed for **LLM agents** — the LLM you're already using handles semantics, NeuromemoryAI handles memory dynamics.
 
-Engram is **just the memory layer**. It doesn't include an LLM — you bring your own. The insight is that your LLM already handles semantics; engram handles the *dynamics* of when to remember and what to forget.
+**No additional infrastructure:**
+- ❌ No separate embedding API calls (OpenAI embeddings, etc.)
+- ❌ No vector database (Pinecone, Chroma, Qdrant)
+- ❌ No extra services to deploy
+
+**What this means:**
+```
+Typical setup:  LLM + Embedding API + Vector DB + Your App
+With engram:    LLM + SQLite file + Your App
+```
+
+Your LLM already understands semantics — that's what language models do. NeuromemoryAI adds the *dynamics*: when to surface memories, what to forget, how to consolidate, and how associations form through use.
 
 ## Quick Comparison
 
@@ -360,6 +368,8 @@ Memories flow: **L3 (working) → L2 (core) → L4 (archive)** as they consolida
 
 ## Engram vs Mem0 vs Zep
 
+All three are designed for **LLM agents** — the comparison is about what *additional* infrastructure each requires beyond the LLM you already have.
+
 | | **Engram** | **Mem0** | **Zep** |
 |---|---|---|---|
 | **Retrieval model** | ACT-R activation (recency × frequency × context) | Cosine similarity | Cosine similarity + MMR |
@@ -369,15 +379,13 @@ Memories flow: **L3 (working) → L2 (core) → L4 (archive)** as they consolida
 | **Confidence scores** | Yes (metacognitive monitoring) | No | No |
 | **Reward learning** | Yes (dopaminergic feedback) | No | No |
 | **Associative links** | **Hebbian learning** (automatic co-activation) | Manual graph construction | None |
-| **Dependencies** | **Zero** (stdlib only) | OpenAI, Qdrant/Chroma, ... | OpenAI, Postgres, ... |
-| **Storage** | SQLite (local file) | Vector DB required | Postgres required |
-| **Embedding model** | **Not needed** | Required | Required |
-| **API keys needed** | **No** | Yes (LLM + vector DB) | Yes (LLM + vector DB) |
-| **Works offline** | ✅ | ❌ | ❌ |
+| **Additional infra** | **None** (SQLite file) | Embedding API + Vector DB | Embedding API + Postgres |
+| **Extra API calls** | **0** per recall | 1+ (embedding) | 1+ (embedding) |
+| **Works offline** | ✅ (with local LLM) | ❌ | ❌ |
 | **Math grounding** | Peer-reviewed cognitive science | Engineering heuristics | Engineering heuristics |
 | **Core code** | ~500 lines | ~5,000+ lines | ~10,000+ lines |
 
-**Engram's thesis:** The LLM already understands semantics. Memory infrastructure should handle *dynamics* — when to surface, what to deprioritize, how to rank — using proven mathematical models rather than re-implementing semantic understanding with embeddings.
+**Engram's thesis:** Your LLM already understands semantics — that's what language models do. Memory infrastructure should handle *dynamics* (when to surface, what to forget, how associations form) using proven cognitive science models, not re-implement semantic understanding with a separate embedding pipeline.
 
 ## MCP Server
 
