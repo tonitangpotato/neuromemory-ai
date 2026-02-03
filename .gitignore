@@ -10,3 +10,4 @@ build/
 
 # Benchmark outputs
 benchmarks/locomo_predictions.json
+MemoryAgentBench/

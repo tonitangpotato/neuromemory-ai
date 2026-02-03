@@ -258,6 +258,10 @@ class Memory:
         # Track retrieval for anomaly detection
         self._tracker.update("retrieval_count", len(output))
 
+        # ACT-R: Record access for all retrieved memories (boosts future retrieval)
+        for r in search_results:
+            self._store.record_access(r.entry.id)
+
         # Hebbian learning: record co-activation for recalled memories
         if self.config.hebbian_enabled and len(output) >= 2:
             memory_ids = [r["id"] for r in output]
