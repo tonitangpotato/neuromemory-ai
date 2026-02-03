@@ -72,6 +72,7 @@ The math is simple. The insight is connecting it to agent memory. Total core: **
 - 🗄️ **SQLite + FTS5** — persistent storage with full-text search, zero config
 - 🔀 **Contradiction detection** — memories can contradict each other; outdated memories get 0.3× confidence penalty
 - 🔍 **Graph search** — entity-linked memories with multi-hop graph expansion
+- 🧠 **Hebbian learning** — "neurons that fire together wire together" — automatic link formation from co-activation patterns (no NER needed)
 - ⚙️ **Config presets** — tuned parameter sets for chatbot, task-agent, personal-assistant, researcher
 - 📦 **Zero dependencies** — pure Python stdlib. No numpy, no torch, no API keys.
 
@@ -174,7 +175,29 @@ mem = Memory("assistant.db", config=MemoryConfig.personal_assistant())
 mem = Memory("research.db", config=MemoryConfig.researcher())
 ```
 
-### 5. Daily Maintenance (cron job or scheduler)
+### 5. Hebbian Learning (Automatic Associations)
+
+Memories that are recalled together automatically form links — no manual entity tagging needed:
+
+```python
+# Add memories (no manual entities specified)
+mem.add("Python is great for machine learning")
+mem.add("PyTorch is my favorite ML framework")
+mem.add("TensorFlow has better production support")
+
+# Query multiple times — co-activation creates associations
+for _ in range(3):
+    mem.recall("machine learning frameworks", limit=3)
+
+# After 3+ co-activations, Hebbian links form automatically
+# Now querying "Python" will automatically surface PyTorch/TensorFlow via spreading activation
+results = mem.recall("Python tools", graph_expand=True)
+# Returns: PyTorch, TensorFlow (via Hebbian links) + Python (direct match)
+```
+
+**"Neurons that fire together, wire together"** — implemented as associative memory that emerges from usage patterns.
+
+### 6. Daily Maintenance (cron job or scheduler)
 
 ```python
 # Run once per day
@@ -298,6 +321,7 @@ Memories flow: **L3 (working) → L2 (core) → L4 (archive)** as they consolida
 | **Memory types** | 6 types with distinct decay rates | Untyped | Untyped |
 | **Confidence scores** | Yes (metacognitive monitoring) | No | No |
 | **Reward learning** | Yes (dopaminergic feedback) | No | No |
+| **Associative links** | **Hebbian learning** (automatic co-activation) | Manual graph construction | None |
 | **Dependencies** | **Zero** (stdlib only) | OpenAI, Qdrant/Chroma, ... | OpenAI, Postgres, ... |
 | **Storage** | SQLite (local file) | Vector DB required | Postgres required |
 | **Embedding model** | **Not needed** | Required | Required |
