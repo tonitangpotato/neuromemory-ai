@@ -2,9 +2,6 @@
  * Core memory data structures.
  */
 
-import { v4 as uuidv4 } from 'uuid';
-
-// We use a simple ID generator instead of uuid dependency
 function shortId(): string {
   return Math.random().toString(36).substring(2, 10);
 }

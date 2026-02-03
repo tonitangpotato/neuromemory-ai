@@ -70,6 +70,9 @@ The math is simple. The insight is connecting it to agent memory. Total core: **
 - ⚠️ **Anomaly detection** — flags unusual patterns (predictive coding)
 - 📌 **Pinning** — manually protect critical memories from decay
 - 🗄️ **SQLite + FTS5** — persistent storage with full-text search, zero config
+- 🔀 **Contradiction detection** — memories can contradict each other; outdated memories get 0.3× confidence penalty
+- 🔍 **Graph search** — entity-linked memories with multi-hop graph expansion
+- ⚙️ **Config presets** — tuned parameter sets for chatbot, task-agent, personal-assistant, researcher
 - 📦 **Zero dependencies** — pure Python stdlib. No numpy, no torch, no API keys.
 
 ## Quick Start
@@ -202,7 +205,7 @@ Engram ships with an MCP (Model Context Protocol) server for use with Claude, Cl
 python -m engram.mcp_server --db ./agent.db
 ```
 
-*MCP server is coming in v0.2. The core library works today.*
+*MCP server provides 7 tools: store, recall, consolidate, forget, reward, stats, export.*
 
 ## API Reference
 
@@ -286,6 +289,37 @@ mem.forget(threshold=0.05)  # Prune all below threshold
 
 Pin/unpin a memory. Pinned memories never decay.
 
+### `mem.update_memory(old_id, new_content) → str`
+
+Correct a memory. Creates a new memory linked to the old one (correction chain).
+
+```python
+new_id = mem.update_memory(old_id, "Actually, the database is on us-west-2")
+# Old memory is marked as contradicted, new one references it
+```
+
+### `mem.add(..., contradicts=old_id)`
+
+Explicitly mark a new memory as contradicting an old one.
+
+```python
+mem.add("We migrated to PlanetScale", type="factual", contradicts=old_id)
+# Old memory gets 0.3× confidence penalty in recall
+```
+
+### `Memory(path, config=MemoryConfig.personal_assistant())`
+
+Use a config preset tuned for your agent type.
+
+```python
+from engram.config import MemoryConfig
+
+mem = Memory("agent.db", config=MemoryConfig.chatbot())           # High replay, slow decay
+mem = Memory("agent.db", config=MemoryConfig.task_agent())        # Fast decay, aggressive pruning
+mem = Memory("agent.db", config=MemoryConfig.personal_assistant()) # Long-term, slow core decay
+mem = Memory("agent.db", config=MemoryConfig.researcher())        # Never lose anything
+```
+
 ### `mem.stats() → dict`
 
 System statistics: counts, layer distribution, strength averages.
@@ -312,12 +346,16 @@ Engram is grounded in peer-reviewed cognitive science:
 - [x] SQLite + FTS5 persistent storage
 - [x] Confidence scoring & reward learning
 - [x] Synaptic downscaling & anomaly detection
-- [ ] MCP server for Claude / Clawdbot integration
+- [x] MCP server (7 tools via FastMCP)
+- [x] Graph-linked memories (entity relationship tracking + multi-hop search)
+- [x] Contradiction detection & correction chains
+- [x] Configurable parameters with agent-type presets
+- [x] 89 tests (unit + e2e lifecycle)
 - [ ] TypeScript port (`npm install engram`)
-- [ ] Embedding-optional hybrid retrieval (FTS5 + vector when available)
-- [ ] Consolidation summaries via LLM (compress episodic → factual)
-- [ ] Graph-linked memories (entity relationship tracking)
+- [ ] PyPI publish (`pip install engram`)
+- [ ] Pluggable store backends (Supabase, Turso, Postgres)
 - [ ] Benchmarks vs Mem0 / Zep on real agent workloads
+- [ ] Consolidation summaries via LLM (compress episodic → factual)
 - [ ] Research paper: *"Neuroscience-Grounded Memory for AI Agents"*
 
 ## Contributing
@@ -325,7 +363,7 @@ Engram is grounded in peer-reviewed cognitive science:
 Contributions welcome! This is an early-stage project — the math is solid but the API surface is still evolving.
 
 ```bash
-git clone https://github.com/ofalltrades/engram
+git clone https://github.com/tonitangpotato/engram
 cd engram
 python -m pytest tests/
 ```

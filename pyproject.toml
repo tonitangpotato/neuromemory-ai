@@ -24,9 +24,16 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ofalltrades/engram"
-Repository = "https://github.com/ofalltrades/engram"
-Issues = "https://github.com/ofalltrades/engram/issues"
+Homepage = "https://github.com/tonitangpotato/engram"
+Repository = "https://github.com/tonitangpotato/engram"
+Issues = "https://github.com/tonitangpotato/engram/issues"
+
+[project.optional-dependencies]
+mcp = ["fastmcp"]
+dev = ["pytest"]
 
 [tool.setuptools.packages.find]
 include = ["engram*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
