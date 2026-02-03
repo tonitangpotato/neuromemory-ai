@@ -37,11 +37,14 @@ import os
 import time
 
 
+from typing import Optional, Union
+
 from engram.config import MemoryConfig
 from engram.core import MemoryEntry, MemoryStore, MemoryType, MemoryLayer, DEFAULT_IMPORTANCE
 from engram.store import SQLiteStore
 from engram.activation import retrieve_top_k
 from engram.search import SearchEngine
+from engram.hybrid_search import HybridSearchEngine
 from engram.consolidation import run_consolidation_cycle, get_consolidation_stats
 from engram.forgetting import effective_strength, should_forget, prune_forgotten
 from engram.confidence import confidence_score, confidence_label
@@ -70,7 +73,12 @@ class Memory:
     Backend: SQLiteStore for persistent storage with FTS5 search.
     """
 
-    def __init__(self, path: str = "./engram.db", config: MemoryConfig = None):
+    def __init__(
+        self, 
+        path: str = "./engram.db", 
+        config: MemoryConfig = None,
+        embedding = None,
+    ):
         """
         Initialize Engram memory system.
 
@@ -78,12 +86,45 @@ class Memory:
             path: Path to SQLite database file. Created if it doesn't exist.
                   Use ":memory:" for in-memory (non-persistent) operation.
             config: MemoryConfig with tunable parameters. None = literature defaults.
+            embedding: Optional embedding adapter for semantic search.
+                      Can be an EmbeddingAdapter instance or a string shortcut:
+                      - "openai" -> OpenAIAdapter (requires OPENAI_API_KEY)
+                      - "ollama" -> OllamaAdapter (requires local Ollama)
+                      - None -> FTS5-only mode (no embeddings)
         """
         self.path = path
         self.config = config or MemoryConfig.default()
         self._store = SQLiteStore(path)
         self._tracker = BaselineTracker(window_size=self.config.anomaly_window_size)
         self._created_at = time.time()
+        
+        # Initialize embedding support
+        self._embedding_adapter = None
+        self._vector_store = None
+        
+        if embedding is not None:
+            self._init_embedding(embedding)
+
+    def _init_embedding(self, embedding):
+        """Initialize embedding adapter and vector store."""
+        from engram.vector_store import VectorStore
+        
+        # Handle string shortcuts
+        if isinstance(embedding, str):
+            if embedding == "openai":
+                from engram.embeddings import OpenAIAdapter
+                self._embedding_adapter = OpenAIAdapter()
+            elif embedding == "ollama":
+                from engram.embeddings import OllamaAdapter
+                self._embedding_adapter = OllamaAdapter()
+            else:
+                raise ValueError(f"Unknown embedding shortcut: {embedding}. Use 'openai', 'ollama', or pass an adapter instance.")
+        else:
+            # Assume it's an adapter instance
+            self._embedding_adapter = embedding
+        
+        # Initialize vector store
+        self._vector_store = VectorStore(self._store._conn, self._embedding_adapter)
 
     def add(self, content: str, type: str = "factual", importance: float = None,
             source: str = "", tags: list[str] = None,
@@ -146,6 +187,10 @@ class Memory:
 
         # Track encoding rate for anomaly detection
         self._tracker.update("encoding_rate", 1.0)
+        
+        # Store embedding if adapter is configured
+        if self._vector_store is not None:
+            self._vector_store.add(entry.id, actual_content)
 
         return entry.id
 
@@ -176,7 +221,12 @@ class Memory:
             List of dicts: {id, content, type, confidence, confidence_label,
                            strength, age_days, layer, importance}
         """
-        engine = SearchEngine(self._store)
+        # Use hybrid search if embeddings are available, else FTS5-only
+        if self._vector_store is not None:
+            engine = HybridSearchEngine(self._store, self._vector_store)
+        else:
+            engine = SearchEngine(self._store)
+        
         search_results = engine.search(
             query=query,
             limit=limit,

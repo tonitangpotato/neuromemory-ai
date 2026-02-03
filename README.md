@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![TypeScript](https://img.shields.io/badge/typescript-5.0%2B-blue.svg)](https://typescriptlang.org)
-[![Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen.svg)](#)
+[![Dependencies](https://img.shields.io/badge/core_deps-zero-brightgreen.svg)](#)
 
 ---
 
@@ -26,7 +26,7 @@ results = mem.recall("coding best practices", limit=3)
 mem.consolidate()  # Run "sleep" — transfers short-term → long-term memory
 ```
 
-Zero dependencies. Pure Python. SQLite storage. Works offline.
+Zero required dependencies. Optional embedding support. SQLite storage. Works offline.
 
 ---
 
@@ -47,9 +47,42 @@ The result? Agents that:
 - Can't distinguish between important lessons and trivial observations
 - Treat a memory from 6 months ago the same as one from 5 minutes ago
 
-## The Key Insight
+## Evaluation
 
-> **LLMs are already the semantic layer.** You don't need embeddings to understand meaning — that's what the language model does. What you need is mathematical rigor in *when to surface, what to deprioritize, and how to rank.*
+We evaluated engram on two benchmarks measuring different capabilities:
+
+### Semantic Retrieval (LoCoMo)
+
+[LoCoMo](https://github.com/snap-research/locomo) is a third-party benchmark with 1,982 questions testing conversational memory retrieval.
+
+| Method | MRR | Hit@5 |
+|--------|-----|-------|
+| FTS5-only (no embeddings) | 0.011 | 1.6% |
+| **Embedding-only (BGE-small)** | **0.255** | **38.9%** |
+
+When using embeddings for semantic retrieval, engram achieves MRR 0.255 — competitive with embedding-based memory systems.
+
+### Temporal Dynamics (TDB)
+
+We created a [Temporal Dynamics Benchmark](./benchmarks/TEMPORAL_BENCHMARK_DESIGN.md) to evaluate what ACT-R specifically addresses: recency, frequency, and importance-based retrieval.
+
+| Method | Recency Override | Frequency | Importance | Overall |
+|--------|------------------|-----------|------------|---------|
+| Cosine-only | 0% | 18% | 50% | 22% |
+| Recency-only | 20% | 18% | 20% | 20% |
+| **ACT-R** | **60%** | **100%** | **100%** | **80%** |
+
+On temporal dynamics tasks, ACT-R achieves **80% accuracy** vs **~20%** for approaches without temporal weighting.
+
+**Key insight:** Semantic retrieval and temporal reasoning are different problems. Use embeddings to *find* relevant memories; use ACT-R to *prioritize* based on recency, frequency, and importance.
+
+> ⚠️ **Note on TDB:** This benchmark was created by us to evaluate temporal dynamics — a dimension not covered by existing benchmarks. The methodology and code are [open source](./benchmarks/temporal_benchmark.py) for independent validation.
+
+---
+
+## The Science
+
+> **LLMs are already the semantic layer.** When you need semantic matching, use embeddings. What ACT-R adds is mathematical rigor in *temporal dynamics* — when to surface recent vs. old, frequent vs. rare, important vs. trivial.
 
 Engram implements actual peer-reviewed models from cognitive science:
 
@@ -77,26 +110,32 @@ The math is simple. The insight is connecting it to agent memory. Total core: **
 - 🔍 **Graph search** — entity-linked memories with multi-hop graph expansion
 - 🧠 **Hebbian learning** — "neurons that fire together wire together" — automatic link formation from co-activation patterns (no NER needed)
 - ⚙️ **Config presets** — tuned parameter sets for chatbot, task-agent, personal-assistant, researcher
-- 📦 **Zero dependencies** — pure Python stdlib. No numpy, no torch, no API keys.
+- 📦 **Zero required dependencies** — pure Python stdlib for FTS5 mode. Optional embedding adapters for semantic search.
+- 🔌 **Pluggable embeddings** — supports OpenAI, sentence-transformers, or custom adapters.
 
 ## What You Need
 
 **Just Python 3.10+ and your existing LLM.**
 
-NeuromemoryAI is designed for **LLM agents** — the LLM you're already using handles semantics, NeuromemoryAI handles memory dynamics.
+NeuromemoryAI works in two modes:
 
-**No additional infrastructure:**
-- ❌ No separate embedding API calls (OpenAI embeddings, etc.)
-- ❌ No vector database (Pinecone, Chroma, Qdrant)
-- ❌ No extra services to deploy
-
-**What this means:**
+### FTS5 Mode (Zero Dependencies)
+```python
+from engram import Memory
+mem = Memory("./agent.db")  # Pure Python, no external services
 ```
-Typical setup:  LLM + Embedding API + Vector DB + Your App
-With engram:    LLM + SQLite file + Your App
-```
+Best for: Fast prototyping, offline use, when your LLM handles semantic matching.
 
-Your LLM already understands semantics — that's what language models do. NeuromemoryAI adds the *dynamics*: when to surface memories, what to forget, how to consolidate, and how associations form through use.
+### Embedding Mode (Recommended for Production)
+```python
+from engram import Memory
+from engram.embeddings import SentenceTransformerAdapter
+
+mem = Memory("./agent.db", embedding=SentenceTransformerAdapter())
+```
+Best for: Production deployments needing semantic retrieval. Supports OpenAI, sentence-transformers, or any embedding provider.
+
+**The key insight:** Embeddings handle *semantic matching*; ACT-R handles *temporal dynamics*. Use both for optimal retrieval.
 
 ## Quick Comparison
 
@@ -560,7 +599,7 @@ NeuromemoryAI uses a **pluggable storage architecture**. The core philosophy is 
 - [x] TypeScript port (`npm install neuromemory-ai`)
 - [x] PyPI publish (v0.1.1) (`pip install neuromemory-ai`)
 - [ ] Pluggable store backends (Supabase, Turso, Postgres)
-- [x] Benchmarks vs Mem0 / Zep on real agent workloads
+- [x] Benchmarks: LoCoMo (MRR 0.255) and Temporal Dynamics (80% accuracy)
 - [ ] Consolidation summaries via LLM (compress episodic → factual)
 - [ ] Research paper: *"Neuroscience-Grounded Memory for AI Agents"*
 
