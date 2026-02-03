@@ -289,6 +289,39 @@ nodes:
     status: active
     description: "engram is designed for LLM agents, not standalone. Philosophy: 'LLM is the semantic layer, engram is the dynamics layer'. Don't duplicate what LLM already does well."
 
+  # ══════════════════════════════════════
+  # ADVANCED TESTING SUITE
+  # ══════════════════════════════════════
+  advanced-testing:
+    type: Feature
+    layer: application
+    status: in_progress
+    description: "Comprehensive testing: long-term sim, psychology experiments, real conversations, stress testing"
+
+  test-long-term:
+    type: Component
+    layer: application
+    status: draft
+    description: "1-year (365 days) simulation: memory plateau, important memory persistence, latency trends"
+
+  test-psychology:
+    type: Component
+    layer: application
+    status: draft
+    description: "Psychology experiment replication: serial position, spacing effect, testing effect, forgetting curve, emotional enhancement"
+
+  test-real-conversations:
+    type: Component
+    layer: application
+    status: draft
+    description: "Real conversation patterns: multi-session recall, preference learning, context switching"
+
+  test-stress:
+    type: Component
+    layer: application
+    status: draft
+    description: "Stress testing: 100k memories, continuous writes, burst handling, large DB files"
+
 edges:
   # Phase 0 tasks
   - from: task-package-structure
@@ -493,3 +526,23 @@ edges:
   - from: feat-api
     to: decision-open-core
     relation: decided_by
+
+  # Advanced testing suite
+  - from: test-long-term
+    to: advanced-testing
+    relation: implements
+  - from: test-psychology
+    to: advanced-testing
+    relation: implements
+  - from: test-real-conversations
+    to: advanced-testing
+    relation: implements
+  - from: test-stress
+    to: advanced-testing
+    relation: implements
+  - from: advanced-testing
+    to: phase-1
+    relation: depends_on
+  - from: task-paper
+    to: test-psychology
+    relation: depends_on
