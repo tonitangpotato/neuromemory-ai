@@ -227,7 +227,7 @@ Answer:"""
     
     try:
         response = anthropic_client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-3-haiku-20240307",
             max_tokens=256,
             temperature=0.0,
             messages=[{"role": "user", "content": prompt}]

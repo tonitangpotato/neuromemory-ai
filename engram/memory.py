@@ -200,6 +200,7 @@ class Memory:
                 "layer": r.entry.layer.value,
                 "importance": round(r.entry.importance, 2),
                 "contradicted": bool(r.entry.contradicted_by),
+                "source": r.entry.source_file,  # Include source for evidence matching
             })
 
         # Track retrieval for anomaly detection
