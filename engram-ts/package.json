@@ -4,6 +4,26 @@
   "description": "Neuroscience-grounded memory system for AI agents",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tonitangpotato/engram"
+  },
+  "keywords": [
+    "memory",
+    "agent",
+    "ai",
+    "cognitive",
+    "act-r",
+    "neuroscience"
+  ],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "tsc",
     "test": "node --experimental-vm-modules node_modules/.bin/jest --forceExit",
