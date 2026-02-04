@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS memories (
     id TEXT PRIMARY KEY,
     content TEXT NOT NULL,
     summary TEXT DEFAULT '',
+    tokens TEXT DEFAULT '',
     memory_type TEXT NOT NULL,
     layer TEXT NOT NULL,
     created_at REAL NOT NULL,
@@ -62,26 +63,26 @@ CREATE INDEX IF NOT EXISTS idx_hebbian_target ON hebbian_links(target_id);
 
 _FTS_SCHEMA = """
 CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
-    content, summary, content=memories, content_rowid=rowid
+    content, summary, tokens, content=memories, content_rowid=rowid
 );
 """
 
 _FTS_TRIGGERS = """
 CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN
-    INSERT INTO memories_fts(rowid, content, summary)
-    VALUES (new.rowid, new.content, new.summary);
+    INSERT INTO memories_fts(rowid, content, summary, tokens)
+    VALUES (new.rowid, new.content, new.summary, new.tokens);
 END;
 
 CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN
-    INSERT INTO memories_fts(memories_fts, rowid, content, summary)
-    VALUES ('delete', old.rowid, old.content, old.summary);
+    INSERT INTO memories_fts(memories_fts, rowid, content, summary, tokens)
+    VALUES ('delete', old.rowid, old.content, old.summary, old.tokens);
 END;
 
 CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN
-    INSERT INTO memories_fts(memories_fts, rowid, content, summary)
-    VALUES ('delete', old.rowid, old.content, old.summary);
-    INSERT INTO memories_fts(rowid, content, summary)
-    VALUES (new.rowid, new.content, new.summary);
+    INSERT INTO memories_fts(memories_fts, rowid, content, summary, tokens)
+    VALUES ('delete', old.rowid, old.content, old.summary, old.tokens);
+    INSERT INTO memories_fts(rowid, content, summary, tokens)
+    VALUES (new.rowid, new.content, new.summary, new.tokens);
 END;
 """
 
@@ -145,12 +146,17 @@ class SQLiteStore:
         # Override created_at if provided (for temporal simulation)
         if created_at is not None:
             entry.created_at = created_at
+        
+        # Generate tokens for CJK content
+        from engram.tokenizers import contains_cjk, tokenize_for_fts
+        tokens = tokenize_for_fts(content) if contains_cjk(content) else ""
+        
         self._conn.execute(
-            """INSERT INTO memories (id, content, summary, memory_type, layer, created_at,
+            """INSERT INTO memories (id, content, summary, tokens, memory_type, layer, created_at,
                working_strength, core_strength, importance, pinned, consolidation_count,
                last_consolidated, source_file, contradicts, contradicted_by)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (entry.id, entry.content, entry.summary, entry.memory_type.value,
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (entry.id, entry.content, entry.summary, tokens, entry.memory_type.value,
              entry.layer.value, entry.created_at, entry.working_strength,
              entry.core_strength, entry.importance, int(entry.pinned),
              entry.consolidation_count, entry.last_consolidated, entry.source_file,
@@ -192,6 +198,12 @@ class SQLiteStore:
         self._conn.commit()
 
     def search_fts(self, query: str, limit: int = 20) -> list[MemoryEntry]:
+        from engram.tokenizers import contains_cjk, tokenize_for_fts
+        
+        # Tokenize CJK queries for better matching
+        if contains_cjk(query):
+            query = tokenize_for_fts(query)
+        
         rows = self._conn.execute(
             """SELECT m.* FROM memories m
                JOIN memories_fts f ON m.rowid = f.rowid
