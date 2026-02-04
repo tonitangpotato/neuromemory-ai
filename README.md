@@ -154,7 +154,7 @@ Best for: Production deployments needing semantic retrieval. Supports OpenAI, se
 | Platform | Install | Documentation |
 |----------|---------|---------------|
 | Python | `pip install engramai` | [PyPI](https://pypi.org/project/engramai/) |
-| TypeScript | `npm install engramai` | [npm](https://www.npmjs.com/package/engramai) |
+| TypeScript | `npm install neuromemory-ai` | [npm](https://www.npmjs.com/package/neuromemory-ai) |
 | MCP Server | `python -m engram.mcp_server` | [MCP Setup](#mcp-integration) |
 | CLI | `neuromem --help` | [CLI Docs](#cli-usage) |
 
@@ -712,7 +712,7 @@ NeuromemoryAI uses a **pluggable storage architecture**. The core philosophy is 
 - [x] Contradiction detection & correction chains
 - [x] Configurable parameters with agent-type presets
 - [x] 89 tests (unit + e2e lifecycle)
-- [x] TypeScript port (`npm install engramai`)
+- [x] TypeScript port (`npm install neuromemory-ai`)
 - [x] PyPI publish (v0.1.1) (`pip install engramai`)
 - [ ] Pluggable store backends (Supabase, Turso, Postgres)
 - [x] Benchmarks: LoCoMo (MRR 0.255) and Temporal Dynamics (80% accuracy)
@@ -724,7 +724,7 @@ NeuromemoryAI uses a **pluggable storage architecture**. The core philosophy is 
 A TypeScript/JavaScript port is available in the `engram-ts/` directory. It provides the same neuroscience-grounded memory models with a native Node.js/Bun API.
 
 ```bash
-npm install engramai
+npm install neuromemory-ai
 ```
 
 For TypeScript-specific documentation, see [engram-ts/README.md](./engram-ts/README.md).

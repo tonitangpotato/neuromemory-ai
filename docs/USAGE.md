@@ -30,7 +30,7 @@ pip install engramai
 ### TypeScript/Node.js
 
 ```bash
-npm install engramai
+npm install neuromemory-ai
 ```
 
 ### 验证安装
