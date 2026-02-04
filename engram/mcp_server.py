@@ -46,7 +46,7 @@ def _get_mem() -> Memory:
     return _mem
 
 
-@mcp.tool(name="engram.store", description="Store a new memory in the Engram system")
+@mcp.tool(name="store", description="Store a new memory in the Engram system")
 def store_memory(
     content: str,
     type: str = "factual",
@@ -65,7 +65,7 @@ def store_memory(
     }
 
 
-@mcp.tool(name="engram.recall", description="Retrieve relevant memories using neuroscience-based activation retrieval")
+@mcp.tool(name="recall", description="Retrieve relevant memories using neuroscience-based activation retrieval")
 def recall_memories(
     query: str,
     limit: int = 5,
@@ -89,7 +89,7 @@ def recall_memories(
     ]
 
 
-@mcp.tool(name="engram.consolidate", description="Run memory consolidation (sleep cycle) to strengthen and organize memories")
+@mcp.tool(name="consolidate", description="Run memory consolidation (sleep cycle) to strengthen and organize memories")
 def consolidate_memories(days: float = 1.0) -> dict:
     """Run consolidation. Call periodically to maintain memory health."""
     mem = _get_mem()
@@ -105,7 +105,7 @@ def consolidate_memories(days: float = 1.0) -> dict:
     }
 
 
-@mcp.tool(name="engram.forget", description="Forget a specific memory or prune weak ones below threshold")
+@mcp.tool(name="forget", description="Forget a specific memory or prune weak ones below threshold")
 def forget_memory(memory_id: str | None = None, threshold: float = 0.01) -> dict:
     """Forget a memory by ID, or prune all weak memories below threshold."""
     mem = _get_mem()
@@ -119,7 +119,7 @@ def forget_memory(memory_id: str | None = None, threshold: float = 0.01) -> dict
     }
 
 
-@mcp.tool(name="engram.reward", description="Process feedback to adjust memory weights (dopaminergic reward signal)")
+@mcp.tool(name="reward", description="Process feedback to adjust memory weights (dopaminergic reward signal)")
 def reward_memories(feedback: str, recent_n: int = 3) -> dict:
     """Apply positive/negative feedback to recent memories."""
     mem = _get_mem()
@@ -133,13 +133,13 @@ def reward_memories(feedback: str, recent_n: int = 3) -> dict:
     }
 
 
-@mcp.tool(name="engram.stats", description="Get memory system statistics")
+@mcp.tool(name="stats", description="Get memory system statistics")
 def memory_stats() -> dict:
     """Return comprehensive memory system statistics."""
     return _get_mem().stats()
 
 
-@mcp.tool(name="engram.export", description="Export memory database to a file")
+@mcp.tool(name="export", description="Export memory database to a file")
 def export_memories(path: str) -> dict:
     """Export the memory database to the given path."""
     mem = _get_mem()
@@ -151,7 +151,7 @@ def export_memories(path: str) -> dict:
     }
 
 
-@mcp.tool(name="engram.hebbian_links", description="Get Hebbian associations for a memory")
+@mcp.tool(name="hebbian_links", description="Get Hebbian associations for a memory")
 def hebbian_links(memory_id: str) -> dict:
     """Get memories linked via Hebbian learning (co-activation patterns)."""
     mem = _get_mem()
@@ -175,7 +175,7 @@ def hebbian_links(memory_id: str) -> dict:
     }
 
 
-@mcp.tool(name="engram.all_hebbian", description="Get all Hebbian links in the memory system")
+@mcp.tool(name="all_hebbian", description="Get all Hebbian links in the memory system")
 def all_hebbian_links() -> dict:
     """Get all Hebbian associations formed through co-activation."""
     mem = _get_mem()
@@ -195,7 +195,7 @@ def all_hebbian_links() -> dict:
     }
 
 
-@mcp.tool(name="engram.pin", description="Pin a memory to prevent forgetting")
+@mcp.tool(name="pin", description="Pin a memory to prevent forgetting")
 def pin_memory(memory_id: str) -> dict:
     """Pin a memory so it won't be forgotten during pruning."""
     mem = _get_mem()
@@ -207,7 +207,7 @@ def pin_memory(memory_id: str) -> dict:
     return {"pinned": True, "memory_id": memory_id}
 
 
-@mcp.tool(name="engram.unpin", description="Unpin a memory to allow normal forgetting")
+@mcp.tool(name="unpin", description="Unpin a memory to allow normal forgetting")
 def unpin_memory(memory_id: str) -> dict:
     """Unpin a memory to allow normal decay and forgetting."""
     mem = _get_mem()
@@ -219,7 +219,7 @@ def unpin_memory(memory_id: str) -> dict:
     return {"pinned": False, "memory_id": memory_id}
 
 
-@mcp.tool(name="engram.get", description="Get a specific memory by ID")
+@mcp.tool(name="get", description="Get a specific memory by ID")
 def get_memory(memory_id: str) -> dict:
     """Get full details of a specific memory."""
     mem = _get_mem()
