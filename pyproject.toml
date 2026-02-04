@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "engramai"
-version = "0.3.1"
+version = "0.3.2"
 description = "Neuroscience-grounded memory for AI agents"
 readme = "README.md"
 license = "AGPL-3.0-only"
