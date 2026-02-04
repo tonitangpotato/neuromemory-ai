@@ -33,12 +33,18 @@ class SearchResult:
 
 
 def sanitize_fts_query(query: str) -> str:
-    """Sanitize query for FTS5 by removing special characters."""
-    sanitized = re.sub(r'[^a-zA-Z0-9\s]', ' ', query)
-    sanitized = re.sub(r'\s+', ' ', sanitized).strip()
-    if not sanitized:
-        return "memory"
-    return sanitized
+    """Sanitize query for FTS5 using proper tokenization."""
+    try:
+        from engram.tokenizers import tokenize_for_fts
+        # Use the same tokenizer as storage (handles CJK properly)
+        return tokenize_for_fts(query)
+    except ImportError:
+        # Fallback: remove special FTS5 operators
+        sanitized = re.sub(r'[^a-zA-Z0-9\s]', ' ', query)
+        sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+        return sanitized if sanitized else "memory"
+
+
 
 
 class SearchEngine:
