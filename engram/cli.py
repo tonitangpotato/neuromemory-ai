@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-neuromemory-ai CLI
+Engram CLI
 
 Usage:
-    neuromem add "memory content" [--type TYPE] [--importance IMPORTANCE]
-    neuromem recall "query" [--limit LIMIT]
-    neuromem stats
-    neuromem consolidate
-    neuromem forget [--threshold THRESHOLD]
-    neuromem export OUTPUT_PATH
-    neuromem list [--limit LIMIT] [--type TYPE]
+    engram add "memory content" [--type TYPE] [--importance IMPORTANCE]
+    engram recall "query" [--limit LIMIT]
+    engram stats
+    engram consolidate
+    engram forget [--threshold THRESHOLD]
+    engram export OUTPUT_PATH
+    engram list [--limit LIMIT] [--type TYPE]
+    engram import PATH [PATH...] [--verbose]
 """
 
 import argparse
@@ -194,6 +195,25 @@ def cmd_hebbian(args):
     mem.close()
 
 
+def cmd_import(args):
+    """Import memories from markdown files."""
+    from .import_markdown import import_memories
+    
+    result = import_memories(
+        paths=args.paths,
+        db_path=args.db,
+        consolidate=not args.no_consolidate,
+        verbose=args.verbose,
+    )
+    
+    print(f"\n✓ Import complete")
+    print(f"  Imported: {result['imported']}")
+    if result['failed']:
+        print(f"  Failed: {result['failed']}")
+    print(f"  Total memories: {result['total_memories']}")
+    print(f"  By type: {result['by_type']}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="neuromemory-ai: Neuroscience-grounded memory for AI agents",
@@ -238,6 +258,12 @@ def main():
     hebb_parser = subparsers.add_parser("hebbian", help="Show Hebbian links")
     hebb_parser.add_argument("query", help="Query to find memory")
     
+    # import
+    import_parser = subparsers.add_parser("import", help="Import from markdown files")
+    import_parser.add_argument("paths", nargs="+", help="Files or directories to import")
+    import_parser.add_argument("--no-consolidate", action="store_true", help="Skip consolidation")
+    import_parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
+    
     args = parser.parse_args()
     
     if args.command is None:
@@ -253,6 +279,7 @@ def main():
         "export": cmd_export,
         "list": cmd_list,
         "hebbian": cmd_hebbian,
+        "import": cmd_import,
     }
     
     commands[args.command](args)

@@ -277,30 +277,58 @@ After installation, use the `neuromem` command:
 
 ```bash
 # Add memories
-neuromem add "User prefers dark mode" --type preference --importance 0.8
+engram add "User prefers dark mode" --type preference --importance 0.8
 
 # Recall memories
-neuromem recall "user preferences"
+engram recall "user preferences"
 
 # View statistics
-neuromem stats
+engram stats
 
 # Run maintenance
-neuromem consolidate
-neuromem forget --threshold 0.01
+engram consolidate
+engram forget --threshold 0.01
 
 # List all memories
-neuromem list --limit 20
+engram list --limit 20
 
 # Show Hebbian links for a memory
-neuromem hebbian "dark mode"
+engram hebbian "dark mode"
+
+# Import from markdown files (MEMORY.md, daily logs, etc.)
+engram import ./memory/ MEMORY.md --verbose
 
 # Export database
-neuromem export backup.db
+engram export backup.db
 
 # Use a different database
-neuromem --db ./custom.db add "Custom memory"
+engram --db ./custom.db add "Custom memory"
 ```
+
+#### Importing from Markdown
+
+If you have existing memories in markdown format (like `MEMORY.md` or daily logs), you can bulk import them:
+
+```bash
+# Import a directory of markdown files
+engram import ./memory/
+
+# Import specific files
+engram import MEMORY.md memory/2024-01-*.md
+
+# Verbose mode shows progress
+engram import ./memory/ -v
+
+# Skip consolidation (run it manually later)
+engram import ./memory/ --no-consolidate
+```
+
+The importer:
+- Extracts bullet points as individual memories
+- Infers memory type from content (preferences → relational, lessons → procedural, etc.)
+- Infers importance from keywords and source
+- Deduplicates by content
+- Runs consolidation to form Hebbian links
 
 ---
 
