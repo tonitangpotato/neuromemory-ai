@@ -12,3 +12,12 @@ export { BaselineTracker } from './anomaly';
 export { SearchEngine, SearchResult } from './search';
 export { recordCoactivation, maybeCreateLink, getHebbianNeighbors, decayHebbianLinks, strengthenLink, getAllHebbianLinks } from './hebbian';
 export { SessionWorkingMemory, SessionRecallResult, getSessionWM, clearSession, listSessions } from './session_wm';
+
+// Embedding exports (v1.0.0)
+export { EmbeddingProvider, EmbeddingConfig, EmbeddingResult, ProviderInfo, DEFAULT_EMBEDDING_CONFIG } from './embeddings/base';
+export { OpenAIEmbeddingProvider } from './embeddings/openai';
+export { OllamaEmbeddingProvider } from './embeddings/ollama';
+export { MCPEmbeddingProvider } from './embeddings/mcp';
+export { detectProvider, getAvailableProviders } from './embeddings/provider_detection';
+export { cosineSimilarity, vectorSearch, VectorSearchResult, migrateVectorColumn, storeVector, getVector, getVectorCount } from './vector_search';
+export { hybridSearch, adaptiveHybridSearch, HybridSearchResult } from './hybrid_search';

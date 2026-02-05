@@ -117,7 +117,7 @@ function rowToEntry(row: MemoryRow, accessTimes?: number[]): MemoryEntry {
 
 export class SQLiteStore {
   dbPath: string;
-  private db: DatabaseType;
+  public db: DatabaseType; // Made public for vector_search access
 
   constructor(dbPath: string = ':memory:') {
     this.dbPath = dbPath;

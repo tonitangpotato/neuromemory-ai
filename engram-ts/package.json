@@ -1,7 +1,7 @@
 {
   "name": "@tonipotatonpm/engramai",
-  "version": "0.3.1",
-  "description": "Neuroscience-grounded memory system for AI agents",
+  "version": "1.0.0",
+  "description": "Neuroscience-grounded memory system for AI agents with semantic search and auto-fallback",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "license": "AGPL-3.0-or-later",

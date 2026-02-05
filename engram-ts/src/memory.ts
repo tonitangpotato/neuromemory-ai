@@ -15,6 +15,10 @@ import { synapticDownscale } from './downscaling';
 import { BaselineTracker } from './anomaly';
 import { recordCoactivation, decayHebbianLinks, getHebbianNeighbors } from './hebbian';
 import { SessionWorkingMemory, SessionRecallResult, getSessionWM } from './session_wm';
+import { EmbeddingProvider, EmbeddingConfig, DEFAULT_EMBEDDING_CONFIG } from './embeddings/base';
+import { detectProvider, getAvailableProviders } from './embeddings/provider_detection';
+import { migrateVectorColumn, storeVector, getVectorCount } from './vector_search';
+import { hybridSearch, adaptiveHybridSearch } from './hybrid_search';
 
 const TYPE_MAP: Record<string, MemoryType> = {};
 for (const t of Object.values(MemoryType)) {
@@ -27,15 +31,36 @@ export class Memory {
   _store: SQLiteStore;
   private _tracker: BaselineTracker;
   private _createdAt: number;
+  private _embeddingProvider: EmbeddingProvider | null = null;
+  private _embeddingConfig: EmbeddingConfig;
+  private _embeddingInitialized = false;
 
-  constructor(path: string = './engram.db', config?: MemoryConfig) {
+  constructor(path: string = './engram.db', config?: MemoryConfig, embeddingConfig?: EmbeddingConfig) {
     this.path = path;
     this.config = config ?? MemoryConfig.default();
     this._store = new SQLiteStore(path);
     this._tracker = new BaselineTracker(this.config.anomalyWindowSize);
     this._createdAt = Date.now() / 1000;
+    this._embeddingConfig = embeddingConfig ?? DEFAULT_EMBEDDING_CONFIG;
+    
+    // Migrate vector column if needed
+    migrateVectorColumn(this._store.db);
   }
 
+  /**
+   * Lazily initialize embedding provider
+   */
+  private async _ensureEmbedding(): Promise<void> {
+    if (this._embeddingInitialized) return;
+    
+    this._embeddingProvider = await detectProvider(this._embeddingConfig);
+    this._embeddingInitialized = true;
+  }
+
+  /**
+   * Add a new memory (synchronous, no embedding)
+   * For embedding support, use `addWithEmbedding()` instead
+   */
   add(
     content: string,
     opts: {
@@ -88,6 +113,39 @@ export class Memory {
 
     this._tracker.update('encoding_rate', 1.0);
     return entry.id;
+  }
+
+  /**
+   * Add a new memory with embedding support (async)
+   */
+  async addWithEmbedding(
+    content: string,
+    opts: {
+      type?: string;
+      importance?: number;
+      source?: string;
+      tags?: string[];
+      entities?: Array<string | [string, string]>;
+      contradicts?: string;
+    } = {},
+  ): Promise<string> {
+    // Add memory first (synchronous)
+    const memoryId = this.add(content, opts);
+
+    // Generate and store embedding (async)
+    await this._ensureEmbedding();
+    
+    if (this._embeddingProvider && this._embeddingProvider.name !== 'none') {
+      try {
+        const result = await this._embeddingProvider.embed(content);
+        storeVector(this._store.db, memoryId, result.embedding);
+      } catch (error) {
+        console.error(`Failed to generate embedding for ${memoryId}:`, error);
+        // Continue without embedding (graceful degradation)
+      }
+    }
+
+    return memoryId;
   }
 
   recall(
@@ -148,6 +206,101 @@ export class Memory {
     // Record Hebbian co-activation
     if (this.config.hebbianEnabled && searchResults.length >= 2) {
       const resultIds = searchResults.map(r => r.entry.id);
+      recordCoactivation(this._store, resultIds, this.config);
+    }
+
+    this._tracker.update('retrieval_count', output.length);
+    return output;
+  }
+
+  /**
+   * Recall with embedding support (hybrid search)
+   * Combines vector similarity + FTS5 for better cross-language/semantic recall
+   */
+  async recallWithEmbedding(
+    query: string,
+    opts: {
+      limit?: number;
+      context?: string[];
+      types?: string[];
+      minConfidence?: number;
+      vectorWeight?: number;
+      ftsWeight?: number;
+    } = {},
+  ): Promise<Array<{
+    id: string;
+    content: string;
+    type: string;
+    confidence: number;
+    confidence_label: string;
+    strength: number;
+    activation: number;
+    age_days: number;
+    layer: string;
+    importance: number;
+    contradicted: boolean;
+    vector_score?: number;
+    fts_score?: number;
+  }>> {
+    const {
+      limit = 5,
+      vectorWeight = 0.7,
+      ftsWeight = 0.3,
+    } = opts;
+
+    // Ensure embedding provider initialized
+    await this._ensureEmbedding();
+
+    // Generate query embedding
+    let queryVector: number[] | null = null;
+    if (this._embeddingProvider && this._embeddingProvider.name !== 'none') {
+      try {
+        const result = await this._embeddingProvider.embed(query);
+        queryVector = result.embedding;
+      } catch (error) {
+        console.error('Failed to generate query embedding:', error);
+        // Fall back to FTS5 only
+      }
+    }
+
+    // Hybrid search
+    const searchResults = adaptiveHybridSearch(
+      this._store.db,
+      queryVector,
+      query,
+      limit,
+    );
+
+    // Convert to Memory format
+    const now = Date.now() / 1000;
+    const output = searchResults.map(r => {
+      const entry = this._store.get(r.id);
+      if (!entry) {
+        throw new Error(`Memory ${r.id} not found`);
+      }
+
+      const conf = confidenceScore(entry, null, now);
+
+      return {
+        id: entry.id,
+        content: entry.content,
+        type: entry.memoryType,
+        confidence: Math.round(conf * 1000) / 1000,
+        confidence_label: confidenceLabel(conf),
+        strength: Math.round(effectiveStrength(entry, now) * 1000) / 1000,
+        activation: Math.round(r.score * 1000) / 1000,
+        age_days: Math.round(entry.ageDays() * 10) / 10,
+        layer: entry.layer,
+        importance: Math.round(entry.importance * 100) / 100,
+        contradicted: Boolean(entry.contradictedBy),
+        vector_score: Math.round(r.vectorScore * 1000) / 1000,
+        fts_score: Math.round(r.ftsScore * 1000) / 1000,
+      };
+    });
+
+    // Record Hebbian co-activation
+    if (this.config.hebbianEnabled && output.length >= 2) {
+      const resultIds = output.map(r => r.id);
       recordCoactivation(this._store, resultIds, this.config);
     }
 
@@ -345,7 +498,62 @@ export class Memory {
     };
   }
 
+  /**
+   * Get embedding provider status
+   */
+  async embeddingStatus(): Promise<{
+    provider: string;
+    model: string;
+    dimensions: number;
+    available: boolean;
+    vector_count: number;
+    available_providers: {
+      ollama: boolean;
+      mcp: boolean;
+      openai: boolean;
+      selected: string;
+    };
+    error?: string;
+  }> {
+    await this._ensureEmbedding();
+
+    const vectorCount = getVectorCount(this._store.db);
+    const availableProviders = await getAvailableProviders(this._embeddingConfig);
+
+    if (!this._embeddingProvider) {
+      return {
+        provider: 'none',
+        model: 'none',
+        dimensions: 0,
+        available: false,
+        vector_count: vectorCount,
+        available_providers: availableProviders,
+        error: 'No embedding provider configured',
+      };
+    }
+
+    const info = await this._embeddingProvider.getInfo?.() || {
+      name: this._embeddingProvider.name,
+      model: this._embeddingProvider.model,
+      dimensions: 0,
+      available: false,
+    };
+
+    return {
+      provider: info.name,
+      model: info.model,
+      dimensions: info.dimensions,
+      available: info.available,
+      vector_count: vectorCount,
+      available_providers: availableProviders,
+      error: info.error,
+    };
+  }
+
   close(): void {
+    if (this._embeddingProvider && 'close' in this._embeddingProvider) {
+      (this._embeddingProvider as any).close();
+    }
     this._store.close();
   }
 
