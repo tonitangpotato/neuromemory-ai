@@ -51,7 +51,7 @@ nodes:
       - '[x] Support sentence-transformers/ollama/openai/none'
       - '[x] Document configuration in README'
       - '[x] Add error handling for missing dependencies'
-      - '[x] Test all provider options'
+      - '[ ] Test all provider options'
   EnvVarSupport:
     type: Component
     layer: application

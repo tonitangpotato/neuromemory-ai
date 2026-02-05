@@ -42,7 +42,66 @@ _mem: Memory | None = None
 def _get_mem() -> Memory:
     global _mem
     if _mem is None:
-        _mem = Memory(DB_PATH)
+        # Parse ENGRAM_EMBEDDING config (default: auto)
+        embedding_config = os.environ.get("ENGRAM_EMBEDDING", "auto").lower()
+        
+        import traceback
+        import logging
+        debug_log = "/tmp/engram-mcp-debug.log"
+        
+        # Set up logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [Engram] %(message)s",
+            handlers=[logging.FileHandler(debug_log, mode='a')]
+        )
+        logger = logging.getLogger(__name__)
+        
+        embedding = None
+        
+        logger.info("=== Engram MCP Init ===")
+        logger.info(f"Python: {sys.executable}")
+        logger.info(f"ENGRAM_EMBEDDING: {embedding_config}")
+        
+        # Use auto-detection with fallback chain
+        from engram.provider_detection import get_provider_with_fallback
+        
+        try:
+            # Get provider (with auto-fallback if requested provider unavailable)
+            provider, model, reason = get_provider_with_fallback(embedding_config)
+            
+            logger.info(f"Provider selection: {provider or 'FTS5'} (reason: {reason})")
+            
+            if provider is None:
+                # FTS5-only mode
+                logger.info("✅ Memory initialized (FTS5-only mode)")
+                _mem = Memory(DB_PATH)
+                return _mem
+            
+            # Initialize selected provider
+            if provider == "sentence-transformers":
+                from engram.embeddings import SentenceTransformerAdapter
+                logger.info(f"✅ Loading Sentence Transformers: {model}")
+                embedding = SentenceTransformerAdapter(model)
+                
+            elif provider == "ollama":
+                from engram.embeddings import OllamaAdapter
+                logger.info(f"✅ Connecting to Ollama: {model}")
+                embedding = OllamaAdapter(model=model)
+                
+            elif provider == "openai":
+                from engram.embeddings import OpenAIAdapter
+                logger.info("✅ Initializing OpenAI embeddings")
+                embedding = OpenAIAdapter()
+            
+            _mem = Memory(DB_PATH, embedding=embedding)
+            logger.info(f"✅ Memory initialized with {provider}")
+                
+        except Exception as e:
+            logger.error(f"❌ Error initializing {provider}: {type(e).__name__}: {e}")
+            logger.error(traceback.format_exc())
+            logger.warning("⚠️  Falling back to FTS5-only mode")
+            _mem = Memory(DB_PATH)
     return _mem
 
 
@@ -341,6 +400,56 @@ def unpin_memory(memory_id: str) -> dict:
     entry.pinned = False
     mem._store.update(entry)
     return {"pinned": False, "memory_id": memory_id}
+
+
+@mcp.tool(name="embedding_status", description="Get current embedding provider status")
+def embedding_status() -> dict:
+    """Check which embedding provider is active and its configuration."""
+    mem = _get_mem()
+    
+    if mem._embedding_adapter is None:
+        return {
+            "enabled": False,
+            "provider": "none",
+            "mode": "FTS5-only",
+            "vector_count": 0,
+            "config_env": os.environ.get("ENGRAM_EMBEDDING", "auto"),
+            "auto_selected": False,
+        }
+    
+    provider_name = type(mem._embedding_adapter).__name__
+    vector_count = mem._vector_store.count() if mem._vector_store else 0
+    
+    # Get model info if available
+    model_info = None
+    if hasattr(mem._embedding_adapter, "model_name"):
+        model_info = mem._embedding_adapter.model_name
+    elif hasattr(mem._embedding_adapter, "model"):
+        model_info = mem._embedding_adapter.model
+    
+    # Determine if this was auto-selected
+    config_env = os.environ.get("ENGRAM_EMBEDDING", "auto")
+    auto_selected = config_env.lower() == "auto"
+    
+    result = {
+        "enabled": True,
+        "provider": provider_name,
+        "model": model_info,
+        "vector_count": vector_count,
+        "config_env": config_env,
+        "auto_selected": auto_selected,
+    }
+    
+    # Add detection info if auto-selected
+    if auto_selected:
+        from engram.provider_detection import detect_ollama, detect_sentence_transformers, detect_openai
+        result["available_providers"] = {
+            "ollama": detect_ollama(),
+            "sentence_transformers": detect_sentence_transformers(),
+            "openai": detect_openai(),
+        }
+    
+    return result
 
 
 @mcp.tool(name="get", description="Get a specific memory by ID")

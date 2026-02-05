@@ -1,0 +1,27 @@
+@@ -30,6 +31,15 @@
+     relevance: float        # FTS5 relevance component (0 if no query)
+ 
+ 
++def sanitize_fts_query(query: str) -> str:
++    """Sanitize query for FTS5 by removing special characters."""
++    sanitized = re.sub(r'[^a-zA-Z0-9\s]', ' ', query)
++    sanitized = re.sub(r'\s+', ' ', sanitized).strip()
++    if not sanitized:
++        return "memory"
++    return sanitized
++
++
+ class SearchEngine:
+     """Hybrid retrieval combining FTS5 + ACT-R + structured filtering."""
+ 
+@@ -93,7 +103,9 @@
+         query = query.strip()
+ 
+         if query:
+-            candidates = self.store.search_fts(query, limit=100)
++            # Sanitize query to avoid FTS5 syntax errors
++            sanitized_query = sanitize_fts_query(query)
++            candidates = self.store.search_fts(sanitized_query, limit=100)
+             # Fall back to full scan if FTS returns nothing
+             if not candidates:
+                 candidates = self.store.all()

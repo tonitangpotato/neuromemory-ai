@@ -22,7 +22,7 @@ nodes:
     tasks:
       - '[x] Modify mcp_server.py to enable SentenceTransformerAdapter'
       - '[x] Set default model: all-MiniLM-L6-v2'
-      - '[x] Add vector generation on first startup'
+      - '[ ] Add vector generation on first startup'
       - '[x] Test cross-language recall (English → Chinese)'
       - '[x] Test synonym recall (marketing → 推广)'
       - '[x] Test fuzzy matching (困难 → 难题)'
@@ -51,7 +51,7 @@ nodes:
       - '[x] Support sentence-transformers/ollama/openai/none'
       - '[x] Document configuration in README'
       - '[x] Add error handling for missing dependencies'
-      - '[x] Test all provider options'
+      - '[ ] Test all provider options'
   EnvVarSupport:
     type: Component
     layer: application
@@ -69,11 +69,11 @@ nodes:
     priority: generic
     status: draft
     tasks:
-      - '[x] Implement provider detection logic'
-      - '[x] Add fallback chain: Ollama → ST → FTS5'
-      - '[x] Add embedding_status MCP tool'
-      - '[x] Log provider selection'
-      - '[x] Test all fallback scenarios'
+      - '[ ] Implement provider detection logic'
+      - '[ ] Add fallback chain: Ollama → ST → FTS5'
+      - '[ ] Add embedding_status MCP tool'
+      - '[ ] Log provider selection'
+      - '[ ] Test all fallback scenarios'
   ProviderDetection:
     type: Component
     layer: infrastructure

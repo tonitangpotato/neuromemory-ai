@@ -35,7 +35,7 @@ class SearchResult:
 def sanitize_fts_query(query: str) -> str:
     """Sanitize query for FTS5 using proper tokenization."""
     try:
-        from engram.tokenizers import tokenize_for_fts
+        from engram.engram_tokenizers import tokenize_for_fts
         # Use the same tokenizer as storage (handles CJK properly)
         return tokenize_for_fts(query)
     except ImportError:

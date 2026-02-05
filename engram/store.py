@@ -148,7 +148,7 @@ class SQLiteStore:
             entry.created_at = created_at
         
         # Generate tokens for CJK content
-        from engram.tokenizers import contains_cjk, tokenize_for_fts
+        from engram.engram_tokenizers import contains_cjk, tokenize_for_fts
         tokens = tokenize_for_fts(content) if contains_cjk(content) else ""
         
         self._conn.execute(
@@ -198,7 +198,7 @@ class SQLiteStore:
         self._conn.commit()
 
     def search_fts(self, query: str, limit: int = 20) -> list[MemoryEntry]:
-        from engram.tokenizers import contains_cjk, tokenize_for_fts
+        from engram.engram_tokenizers import contains_cjk, tokenize_for_fts
         
         # Tokenize CJK queries for better matching
         if contains_cjk(query):
